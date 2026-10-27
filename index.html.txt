@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>খবর বাজার - Khabor Bazar</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-card: #252525;
+            --primary-color: #ff9800;
+            --text-primary: #e0e0e0;
+            --text-secondary: #aaaaaa;
+            --accent-red: #ff5252;
+            --border-color: #333333;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            touch-action: pan-y;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface-color);
+            padding: 12px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .search-bar {
+            padding: 8px 14px;
+            background: var(--surface-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            width: 50%;
+        }
+        .tabs {
+            display: flex;
+            background: var(--surface-color);
+            padding: 0 10px;
+            overflow-x: auto;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: 0.3s;
+        }
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: auto;
+            min-height: 80vh;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .card {
+            background: var(--surface-card);
+            border-radius: 12px;
+            padding: 12px 8px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            border: 1px solid var(--border-color);
+            transition: transform 0.1s ease, background 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 95px;
+        }
+        .card:active { transform: scale(0.95); background: #2a2a2a; }
+        .card img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            object-fit: contain;
+        }
+        .card span {
+            font-size: 11px;
+            color: var(--text-primary);
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--accent-red);
+            color: white;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        /* Reader & News list styling */
+        .news-list { display: flex; flex-direction: column; gap: 10px; }
+        .news-item {
+            background: var(--surface-card);
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .news-item.read { opacity: 0.6; }
+        .news-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; color: #fff; }
+        .news-meta { font-size: 11px; color: var(--text-secondary); }
+        
+        /* Reader View */
+        #reader-view {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            z-index: 200;
+            flex-direction: column;
+        }
+        .reader-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            background: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .back-btn { background: none; border: none; color: white; font-size: 18px; cursor: pointer; }
+        .reader-content { flex: 1; padding: 20px; overflow-y: auto; line-height: 1.6; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+            z-index: 300;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">খবর বাজার</div>
+        <input type="text" class="search-bar" placeholder="পত্রিকা খুঁজুন..." id="searchBox" onkeyup="filterPapers()">
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">হোম</div>
+        <div class="tab" onclick="switchTab(1)">সর্বশেষ</div>
+        <div class="tab" onclick="switchTab(2)">অপঠিত</div>
+        <div class="tab" onclick="switchTab(3)">পছন্দ</div>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Grid Papers -->
+        <div class="grid" id="paperGrid"></div>
+    </div>
+
+    <!-- Reader View with Gesture Support -->
+    <div id="reader-view">
+        <div class="reader-header">
+            <button class="back-btn" onclick="closeReader()">✕ বন্ধ করুন</button>
+            <span id="reader-source" style="font-size: 14px; color: var(--primary-color);"></span>
+        </div>
+        <div class="reader-content" id="readerBody">
+            <!-- News details rendered here -->
+        </div>
+    </div>
+
+    <div class="toast" id="toast">স্বাইপ জেস্চার সক্রিয়</div>
+
+    <script>
+        const papers = [
+            { name: "প্রথম আলো", url: "https://www.prothomalo.com", icon: "https://www.prothomalo.com/favicon.ico", cat: "national" },
+            { name: "বাংলাদেশ প্রতিদিন", url: "https://www.bd-pratidin.com", icon: "https://www.bd-pratidin.com/favicon.ico", cat: "national" },
+            { name: "কালের কণ্ঠ", url: "https://www.kalerkantho.com", icon: "https://www.kalerkantho.com/favicon.ico", cat: "national" },
+            { name: "যুগান্তর", url: "https://www.jugantor.com", icon: "https://www.jugantor.com/favicon.ico", cat: "national" },
+            { name: "সমকাল", url: "https://samakal.com", icon: "https://samakal.com/favicon.ico", cat: "national" },
+            { name: "ইত্তেফাক", url: "https://www.ittefaq.com.bd", icon: "https://www.ittefaq.com.bd/favicon.ico", cat: "national" },
+            { name: "আনন্দবাজার", url: "https://www.anandabazar.com", icon: "https://www.anandabazar.com/favicon.ico", cat: "india" },
+            { name: "বর্তমান", url: "https://bartamanpatrika.com", icon: "https://bartamanpatrika.com/favicon.ico", cat: "india" },
+            { name: "বিবিসি বাংলা", url: "https://www.bbc.com/bengali", icon: "https://www.bbc.com/favicon.ico", cat: "international" },
+            { name: "বিডিনিউজ২৪", url: "https://bangla.bdnews24.com", icon: "https://bdnews24.com/favicon.ico", cat: "online" }
+        ];
+
+        let currentTab = 0;
+        let readNews = JSON.parse(localStorage.getItem('read_news') || '{}');
+        let unreadNews = JSON.parse(localStorage.getItem('unread_news') || '[]');
+
+        // Auto clean old items (7 days read, 30 days unread)
+        function cleanStorage() {
+            let now = new Date().getTime();
+            for(let id in readNews) {
+                if(now - readNews[id] > 7 * 24 * 60 * 60 * 1000) delete readNews[id];
+            }
+            localStorage.setItem('read_news', JSON.stringify(readNews));
+        }
+        cleanStorage();
+
+        function renderGrid() {
+            const grid = document.getElementById('paperGrid');
+            grid.innerHTML = '';
+            papers.forEach((p, idx) => {
+                grid.innerHTML += `
+                    <div class="card" onclick="openPaper('${p.name}', '${p.url}')">
+                        <img src="${p.icon}" onerror="this.src='https://via.placeholder.com/32'">
+                        <span>${p.name}</span>
+                        <div class="badge">নতুন</div>
+                    </div>
+                `;
+            });
+        }
+
+        function switchTab(index) {
+            currentTab = index;
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', i === index);
+            });
+            if(index === 0) renderGrid();
+            else if(index === 1) renderNewsList("সর্বশেষ সংবাদ ফিড");
+            else if(index === 2) renderNewsList("অপঠিত সংবাদ");
+            else if(index === 3) renderNewsList("পছন্দের সংবাদ");
+        }
+
+        function openPaper(name, url) {
+            document.getElementById('reader-source').innerText = name;
+            document.getElementById('readerBody').innerHTML = `
+                <div style="text-align:center; padding: 40px;">
+                    <h3>${name}</h3>
+                    <p style="margin: 15px 0; color: var(--text-secondary);">খবর লোড হচ্ছে...</p>
+                    <a href="${url}" target="_blank" style="color: var(--primary-color); text-decoration: none; font-weight: bold;">সরাসরি মূল ওয়েবসাইটে যান ➔</a>
+                </div>
+            `;
+            document.getElementById('reader-view').style.display = 'flex';
+        }
+
+        function closeReader() {
+            document.getElementById('reader-view').style.display = 'none';
+        }
+
+        function renderNewsList(title) {
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = `<h3 style="margin-bottom: 15px; font-size:16px;">${title}</h3><div class="news-list">
+                <div class="news-item" onclick="markAsRead(this, 1)">
+                    <div class="news-title">প্রধানমন্ত্রীর সাথে উচ্চপর্যায়ের বৈঠক অনুষ্ঠিত</div>
+                    <div class="news-meta">প্রথম আলো • ৫ মিনিট আগে</div>
+                </div>
+                <div class="news-item" onclick="markAsRead(this, 2)">
+                    <div class="news-title">আজ দেশের বাজারে স্বর্ণের নতুন দাম নির্ধারণ</div>
+                    <div class="news-meta">বাংলানিউজ২৪ • ২৫ মিনিট আগে</div>
+                </div>
+            </div>`;
+        }
+
+        function markAsRead(el, id) {
+            el.classList.add('read');
+            readNews[id] = new Date().getTime();
+            localStorage.setItem('read_news', JSON.stringify(readNews));
+        }
+
+        function filterPapers() {
+            let query = document.getElementById('searchBox').value.toLowerCase();
+            const grid = document.getElementById('paperGrid');
+            grid.innerHTML = '';
+            papers.filter(p => p.name.toLowerCase().includes(query)).forEach(p => {
+                grid.innerHTML += `
+                    <div class="card" onclick="openPaper('${p.name}', '${p.url}')">
+                        <img src="${p.icon}" onerror="this.src='https://via.placeholder.com/32'">
+                        <span>${p.name}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // Swipe Gestures Logic
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        function handleGesture() {
+            if (touchendX < touchstartX - 70) {
+                // Swipe Left -> Next Tab
+                if(currentTab < 3) switchTab(currentTab + 1);
+            }
+            if (touchendX > touchstartX + 70) {
+                // Swipe Right -> Prev Tab
+                if(currentTab > 0) switchTab(currentTab - 1);
+            }
+        }
+
+        document.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; });
+        document.addEventListener('touchend', e => { 
+            touchendX = e.changedTouches[0].screenX; 
+            handleGesture(); 
+        });
+
+        renderGrid();
+    </script>
+</body>
+</html>
